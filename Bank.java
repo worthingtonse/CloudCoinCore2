@@ -26,6 +26,7 @@ public class Bank
     // instance variables - replace the example below with your own
     // public KeyboardReader reader = new KeyboardReader();
     // public CloudCoin[] chestCoins; 
+    private final int MAX_RESPONSE_TIME = 10000;//10 seconds
     public CloudCoin[] frackedCoins;
     //  public CloudCoin[] importedCoins;
     public CloudCoin[] bankedCoins;
@@ -45,7 +46,7 @@ public class Bank
     {
         // initialise instance variables
         this.rootFolder = rootFolder;
-        raida = new RAIDA();
+        raida = new RAIDA( MAX_RESPONSE_TIME );
     }
 
     /**
@@ -700,7 +701,7 @@ public class Bank
 
             //frackedCoins[k].reportStatus();
             System.out.println("Unfracking SN #"+frackedCoins[k].sn +", Denomination: "+ frackedCoins[k].getDenomination() );
-            fixCoin( frackedCoins[k] );//Checks all 25 GUIDs in the Coin and sets the status.
+            raida.fixCoin( frackedCoins[k] );//Checks all 25 GUIDs in the Coin and sets the status.
 
             //Check CloudCoin's hp. 
             int RAIDAHealth2 = 25;
@@ -741,61 +742,7 @@ public class Bank
 
     }//end fix fracked
 
-    public void fixCoin( CloudCoin brokeCoin ){
-        //Make an array of broken coins or go throug each if broken fix
-        int mode = 1;
-        boolean hasTickets = false;
-        String fix_result = "";
-
-        //brokeCoin.reportStatus();
-
-        for (int guid_id = 0; guid_id < 25; guid_id++  ){//Check every Guid in the cloudcoin to see if it is fractured
-            //  System.out.println("Inspecting RAIDA guid " + guid_id );
-
-            FixitHelper fixer;
-            if( brokeCoin.pastStatus[guid_id].equalsIgnoreCase("fail")){//This guid has failed, get tickets
-                System.out.println("RAIDA" +guid_id +" failed." );
-                fixer = new FixitHelper( guid_id, brokeCoin );
-                //fixer.reportCoinStatus();
-                mode = 1;
-                hasTickets = false;
-                while( ! fixer.finnished ){
-
-                    if( fixer.currentTriadReady ){
-                        hasTickets = raida.getTickets( fixer.currentTriad, fixer.currentAns, brokeCoin.nn, brokeCoin.sn, brokeCoin.getDenomination() ); 
-                        if( hasTickets ){
-                            fix_result = raida.raidaArray[guid_id].fix( fixer.currentTriad, raida.raidaArray[fixer.currentTriad[0]].lastTicket, raida.raidaArray[fixer.currentTriad[1]].lastTicket, raida.raidaArray[fixer.currentTriad[2]].lastTicket, brokeCoin.ans[guid_id]);
-                            if( fix_result.equalsIgnoreCase("success")){
-                                //Save pan to an, stop looping, report sucess. 
-                                brokeCoin.pastStatus[guid_id] = "pass";
-                                // brokeCoin.ans[guid_id] = brokeCoin.pans[guid_id];
-                                //The CloudCoin an does not change. The RAIDA's an changes. No need to save the pan. 
-                                fixer.finnished = true;
-                                System.out.println("GUID fixed for guid " + guid_id );
-
-                            }else{
-                                System.out.println("Fix it command failed for guid  " + guid_id );
-                                mode++;//beed to try another corner
-                                fixer.setCornerToCheck( mode );
-                            }//end if success fixing
-
-                        }else{//No tickets, go to next triad
-
-                            System.out.println("Get ticket commands failed for guid " + guid_id );
-                            mode++;
-                            fixer.setCornerToCheck( mode );
-                        }//all the tickets are good. 
-                    }else{//Triad will not work change it 
-                        System.out.println("Trusted triad "+ mode + " is not able to help: " + brokeCoin.pastStatus[fixer.currentTriad[0]] +", "+brokeCoin.pastStatus[fixer.currentTriad[1]]+", "+brokeCoin.pastStatus[fixer.currentTriad[2]]);
-                        mode++;
-                        fixer.setCornerToCheck( mode );
-                    }//end if traid is ready
-                }//end while still trying to fix
-                //Finnished fixing 
-            }//end if guid is broken and needs to be fixed
-        }//end for each guid
-    }//end fix coin
-
+    
     public static String getHtml(String url_in) throws MalformedURLException, IOException {
         int c;
         URL cloudCoinGlobal = new URL(url_in);
@@ -812,6 +759,8 @@ public class Bank
         input.close();
         return sb.toString();
     }//end get url
+    
+    
 public String sortCoin( CloudCoin coin, int RAIDAHealth ){
         String returnString = "";
         coin.calculateHP();

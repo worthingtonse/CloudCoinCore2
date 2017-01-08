@@ -7,28 +7,24 @@
  */
 public class FixitHelper
 {
-    // instance variables - replace the example below with your own
-    public int id;//Raida to be fixed
+    // instance variables
     public int[] trustedServers = new int[8];//Each servers only trusts eight others
     public int[] trustedTriad1;
     public int[] trustedTriad2;
     public int[] trustedTriad3;
     public int[] trustedTriad4;
     public int[] currentTriad;
-    public String[] ans1;
-    public String[] ans2;
-    public String[] ans3;
-    public String[] ans4;
-    public String[] currentAns;
-    public String[] currentTrustedTriadTickets;
-    public boolean triad_1_is_ready = false;
-    public boolean triad_2_is_ready = false;
-    public boolean triad_3_is_ready = false;
-    public boolean triad_4_is_ready = false;
-    public boolean currentTriadReady = false;
-    public boolean fixed = false;//Is the GUID fixed?
+  
+  
+    /**
+     * Is the GUID fixed yet? Do we need to try another corner?
+     */
+    public boolean fixed = false;
+    /**
+     * Have all the corners been checked yet? If false, change corners and check another if not fixed.
+     */
     public boolean finnished = false;//All triads have been tried
-    public CloudCoin cc; //cloudcoin
+
 
     
     /**
@@ -37,95 +33,71 @@ public class FixitHelper
      * @param id The RAIDA ID like RAIDA12 would be 12
      * @param brokeCoin The CloudCoin that needs to be fixed.
      */
-    public FixitHelper( int id, CloudCoin brokeCoin )
+    public FixitHelper( int raidaNumber )
     {
-        this.id = id;
-        trustedServers[0] = Math.floorMod(id - 6, 25);//T)rusted server 1 is the id of your servers minus 6 mod 25.
-        trustedServers[1] = Math.floorMod(id - 5, 25);
-        trustedServers[2] = Math.floorMod(id - 4, 25);
-        trustedServers[3] = Math.floorMod(id - 1, 25);
-        trustedServers[4] = Math.floorMod(id + 1, 25);
-        trustedServers[5] = Math.floorMod(id + 4, 25);
-        trustedServers[6] = Math.floorMod(id + 5, 25);
-        trustedServers[7] = Math.floorMod(id + 6, 25);
-
+        //Create an array so we can make sure all the servers submitted are within this allowabel group of servers.
+        int[] trustedServers  = new int[] { 33, 33, 33, 33,  33,  33,  33,  37 };//bogus data to make sure initializtion happened
+        //FIND TRUSTED NEIGHBOURS
+        switch( raidaNumber ){
+             case 0: trustedServers = new int[] { 19, 20, 21, 24,  1,  4,  5,  6 }; break;
+             case 1: trustedServers = new int[] { 20, 21, 22,  0,  2,  5,  6,  7 }; break;
+             case 2: trustedServers = new int[] { 21, 22, 23,  1,  3,  6,  7,  8 }; break;
+             case 3: trustedServers = new int[] { 22, 23, 24,  2,  4,  7,  8,  9 }; break;
+             case 4: trustedServers = new int[] { 23, 24,  0,  3,  5,  8,  9, 10 }; break;
+             case 5: trustedServers = new int[] { 24,  0,  1,  4,  6,  9, 10, 11 }; break;
+             case 6: trustedServers = new int[] {  0,  1,  2,  5,  7, 10, 11, 12 }; break;
+             case 7: trustedServers = new int[] {  1,  2,  3,  6,  8, 11, 12, 13 }; break;
+             case 8: trustedServers = new int[] {  2,  3,  4,  7,  9, 12, 13, 14 }; break;
+             case 9: trustedServers = new int[] {  3,  4,  5,  8, 10, 13, 14, 15 }; break;
+            case 10: trustedServers = new int[] {  4,  5,  6,  9, 11, 14, 15, 16 }; break;
+            case 11: trustedServers = new int[] {  5,  6,  7, 10, 12, 15, 16, 17 }; break;
+            case 12: trustedServers = new int[] {  6,  7,  8, 11, 13, 16, 17, 18 }; break;
+            case 13: trustedServers = new int[] {  7,  8,  9, 12, 14, 17, 18, 19 }; break;
+            case 14: trustedServers = new int[] {  8,  9, 10, 13, 15, 18, 19, 20 }; break;
+            case 15: trustedServers = new int[] {  9, 10, 11, 14, 16, 19, 20, 21 }; break;
+            case 16: trustedServers = new int[] { 10, 11, 12, 15, 17, 20, 21, 22 }; break;
+            case 17: trustedServers = new int[] { 11, 12, 13, 16, 18, 21, 22, 23 }; break;
+            case 18: trustedServers = new int[] { 12, 13, 14, 17, 19, 22, 23, 24 }; break;
+            case 19: trustedServers = new int[] { 13, 14, 15, 18, 20, 23, 24,  0 }; break;
+            case 20: trustedServers = new int[] { 14, 15, 16, 19, 21, 24,  0,  1 }; break;
+            case 21: trustedServers = new int[] { 15, 16, 17, 20, 22,  0,  1,  2 }; break;
+            case 22: trustedServers = new int[] { 16, 17, 18, 21, 23,  1,  2,  3 }; break;
+            case 23: trustedServers = new int[] { 17, 18, 19, 22, 24,  2,  3,  4 }; break;
+            case 24: trustedServers = new int[] { 18, 19, 20, 23,  0,  3,  4,  5 }; break;        
+        }//end switch raidaNumber
+        
         trustedTriad1 = new int[]{trustedServers[0] , trustedServers[1] , trustedServers[3] };    
         trustedTriad2 = new int[]{trustedServers[1] , trustedServers[2] , trustedServers[4] };
         trustedTriad3 = new int[]{trustedServers[3] , trustedServers[5] , trustedServers[6] };
         trustedTriad4 = new int[]{trustedServers[4] , trustedServers[6] , trustedServers[7] };
 
-        cc =  brokeCoin;
-        // cc.reportStatus();
-
-        //To be ready, the triad must be authentic and it must be available. This can be learned by looking at the coin's status
-        triad_1_is_ready = is_triad_authentic( trustedTriad1 );
-        triad_2_is_ready = is_triad_authentic( trustedTriad2 );
-        triad_3_is_ready = is_triad_authentic( trustedTriad3 );
-        triad_4_is_ready = is_triad_authentic( trustedTriad4 );
-
-        currentTrustedTriadTickets = null;
-
-        ans1 = new String[] { brokeCoin.ans[trustedTriad1[0]], brokeCoin.ans[trustedTriad1[1]] , brokeCoin.ans[trustedTriad1[2]]  };
-        ans2 = new String[] { brokeCoin.ans[trustedTriad2[0]], brokeCoin.ans[trustedTriad2[1]] , brokeCoin.ans[trustedTriad2[2]]  };
-        ans3 = new String[] { brokeCoin.ans[trustedTriad3[0]], brokeCoin.ans[trustedTriad3[1]] , brokeCoin.ans[trustedTriad3[2]]  };
-        ans4 = new String[] { brokeCoin.ans[trustedTriad4[0]], brokeCoin.ans[trustedTriad4[1]] , brokeCoin.ans[trustedTriad4[2]]  };
-
         currentTriad = trustedTriad1;//Try the first tried first
-        currentAns = ans1;
-        currentTriadReady = triad_1_is_ready;
+
     }//end of constructor
 
     
     /***
      * This changes the Triads that will be used
      */
-    public void setCornerToCheck( int mode ){
+    public void setCornerToCheck( int corner ){
 
-        switch( mode ){
+        switch( corner ){
             case 1:
             currentTriad = trustedTriad1;
-            currentAns = ans1 ;
-            currentTriadReady = triad_1_is_ready;
             break;
             case 2:
             currentTriad = trustedTriad2;
-            currentAns = ans2 ;
-            currentTriadReady = triad_2_is_ready;
             break;
             case 3:
             currentTriad = trustedTriad3;
-            currentAns = ans3 ;
-            currentTriadReady = triad_3_is_ready;
             break;
             case 4:
             currentTriad = trustedTriad4;
-            currentAns = ans4 ;
-            currentTriadReady = triad_4_is_ready;
             break;
             default:
             this.finnished = true;
             break;
         }//end switch
     }//End fix Guid
-
-    
-    /**
-     * Method is_triad_authentic
-     *
-     * @param triad The three numbers of the trusted RAIDA servers
-     * @return true if all the trusted servers have passed their test. 
-     */
-    public boolean is_triad_authentic( int[] triad ){
-        boolean results = false;
-        if(  cc.pastStatus[triad[0]].equalsIgnoreCase("pass") && cc.pastStatus[triad[1]].equalsIgnoreCase("pass") && cc.pastStatus[triad[2]].equalsIgnoreCase("pass")  ){
-            results = true;
-        }
-        return results;
-    }//end check traid
-
-    
-    public void setTickets( String[] tickets){
-        this.currentTrustedTriadTickets = tickets;
-    }//end set tickets
 
 }

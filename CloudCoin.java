@@ -74,6 +74,7 @@ public class CloudCoin
         }
         extension = extension.toLowerCase();
 
+        //System.out.println("Loading file: " + loadFilePath);
         if( extension.equals("jpeg") || extension.equals("jpg")){//JPEG
             FileInputStream fis;
             int y = 0;
@@ -107,10 +108,10 @@ public class CloudCoin
             this.sn = Integer.parseInt(wholeString.substring( 904, 910 ), 16);
 
             for(int i = 0; i< 25; i++){
-                this.pans[0] = generatePan();
+                this.pans[i] = generatePan();
                 this.pastStatus[i] = "undetected";
             }//end for each pan
-        }else{//jpeg image
+        }else{//json image
 
             String jsonData = "";
             BufferedReader br = null;
@@ -130,45 +131,60 @@ public class CloudCoin
                     ex.printStackTrace();
                 }
             }//end try to read Buffered reader
-
+       for(int i = 0; i< 25; i++){
+                this.pans[i] = generatePan();
+                this.pastStatus[i] = "undetected";
+            }//end for each pan
             String[] stringParts = jsonData.split("\""); 
-            this.nn = Integer.parseInt(stringParts[6]);
-            this.sn = Integer.parseInt(stringParts[10]);
-            for(int i = 0; i < 25; i= i+2){
-                this.ans[i] = stringParts[ i*2+14 ];
+
+           //  for(int i = 0; i< stringParts.length; i++){
+             //    System.out.println("Part " + i + ": " +stringParts[i] );
+            // }//for each jsonData part
+            this.nn = Integer.parseInt(stringParts[5]);
+            this.sn = Integer.parseInt(stringParts[9]);
+            for(int i = 0; i < 25; i++){
+                this.ans[i] = stringParts[ i*2+13 ];
             }//end of each an
-            this.ed = stringParts[66];
-            int indexOfFirstAoidSquareBracket = ordinalIndexOf( jsonData, "[", 2);
-            int indexOfLastAoidSquareBracket = ordinalIndexOf( jsonData, "]", 1);
-            this.aoid = jsonData.substring( indexOfFirstAoidSquareBracket, indexOfLastAoidSquareBracket );
+            this.ed = stringParts[65];
+            int indexOfFirstAoidSquareBracket = ordinalIndexOf( jsonData, "[", 3);
+            int indexOfLastAoidSquareBracket = ordinalIndexOf( jsonData, "]", 2);
+            this.aoid = jsonData.substring( indexOfFirstAoidSquareBracket+1, indexOfLastAoidSquareBracket );
             //AOID will be wrtten in human readabiltyif there is a status it will be written like:
             //"From File: c:\fdkjfdkjfd\ffilename"
             //"From Note:  kjj"
             //Imported On: 6-12-2017"
-            //"Status" >pppppppfpppppfffppppppfpp<" where p are pass and f are fail.
-            int indexStartOfStatus = ordinalIndexOf( this.aoid, ">", 3);
-            int indexEndOfStatus = ordinalIndexOf( this.aoid, "<", 2);
-            String rawStatus = aoid.substring(indexStartOfStatus, indexEndOfStatus );
-            if(rawStatus.length() == 25){}//end if status length is 25
-            for(int j = 0; j<25; j++){
-                if( rawStatus.charAt(j) == 'p') { 
-                    this.pastStatus[j] = "pass";
-                }else if(rawStatus.charAt(j) == 'f'){
-                    this.pastStatus[j] = "fail";
-                }else if(rawStatus.charAt(j) == 'e'){
-                    this.pastStatus[j] = "error";
-                }else{
+            this.hp = 25;
+            //Check to see if the CloudCoin's last status was saved
+            if( this.aoid.contains(">") &&  this.aoid.contains("<")){//aoid has some past status info
+                //"Status" >pppppppfpppppfffppppppfpp<" where p are pass and f are fail.
+                int indexStartOfStatus = ordinalIndexOf( this.aoid, ">", 0);
+                int indexEndOfStatus = ordinalIndexOf( this.aoid, "<", 0);
+                String rawStatus = aoid.substring(indexStartOfStatus +1, indexEndOfStatus );
+                this.hp = 25;
+                if(rawStatus.length() == 25){}//end if status length is 25
+                for(int j = 0; j<25; j++){
+                    if( rawStatus.charAt(j) == 'p') { 
+                        this.pastStatus[j] = "pass";
+                    }else if(rawStatus.charAt(j) == 'f'){
+                        this.pastStatus[j] = "fail";
+                        this.hp--;
+                    }else if(rawStatus.charAt(j) == 'e'){
+                        this.pastStatus[j] = "error";
+                    }else{
+                        this.pastStatus[j] = "notdetected";
+                    }
+                }//end for each status code 
+            }else{
+                for(int j = 0; j<25; j++){
                     this.pastStatus[j] = "notdetected";
-                }
-            }//end for each status code 
+                }//end for each status code 
+            }//end if has status
+
         }//end if if jpg
         this.fileName = getDenomination() +".CloudCoin." + this.nn +"."+ this.sn + ".";
         this.json = "";
         this.jpeg = null;
-        for(int i = 0; i< 25; i++){
-            pans[0] = generatePan();
-
-        }//end for each pan
+ 
     }//end new cc based on file content
 
     /**
@@ -190,14 +206,9 @@ public class CloudCoin
         return nom;
     }
 
-    /**
-     * Creates a JSON version of the object that can be written to file
-     *
-     * @param  y   a sample parameter for a method
-     * @return     the sum of x and y
-     */
+
     public String setJSON(){   
-        String json = "{" + System.getProperty("line.separator");
+        this.json = "{" + System.getProperty("line.separator");
         json +=   "\t\"cloudcoin\": [{" + System.getProperty("line.separator") ;
         json += "\t\t\"nn\":\"1\"," + System.getProperty("line.separator");
         json +="\t\t\"sn\":\""+ sn + "\"," + System.getProperty("line.separator");
@@ -312,7 +323,7 @@ public class CloudCoin
     public boolean saveCoin(String extension ){
         boolean goodSave = false;
         setJSON();
-        File f = new File("./Bank/" + this.fileName + extension );
+        File f = new File("./bank/" + this.fileName + extension );
         if(f.exists() && !f.isDirectory()) { 
             System.out.println("A coin with that SN already exists in the bank. Export it first.");
             return goodSave;
@@ -372,11 +383,11 @@ public class CloudCoin
     public boolean writeJpeg( String path, String tag ){  
         boolean writeGood = true;
         String file = path + File.separator  + this.fileName + tag +".jpg";
-        System.out.println("Saving jpg: " + file);
+        //System.out.println("Saving jpg: " + file);
         try{
             Files.write(Paths.get( file ), this.jpeg );
         }catch( IOException ex ){
-            System.out.println( "Error Saving Jpeg: " + ex );
+          //  System.out.println( "Error Saving Jpeg: " + ex );
             writeGood = false;
         }//end try ioexception
         return writeGood;
@@ -394,17 +405,19 @@ public class CloudCoin
         String passedDesc ="";
         String failedDesc ="";
         String otherDesc ="";
+        String internalAoid = ">";
         for( int i=0; i< 25; i++ ){
 
             if( pastStatus[i].equalsIgnoreCase("pass")  ){
-                passed++;
+                passed++; internalAoid +="p";//p means pass
             }else if( pastStatus[i].equalsIgnoreCase("fail")){
-                failed++;
+                failed++;  internalAoid +="f"; //f means fail
             }else{
-                other++;
+                other++;  internalAoid +="u";//u means undetected
             }//end if pass, fail or unknown
         }//for each status
-
+         internalAoid += "<";
+         this.aoid = internalAoid;
         //Calculate passed
         if( passed == 25 ){
             passedDesc = "100% Passed!"; 
@@ -479,7 +492,7 @@ public class CloudCoin
         this.edHex += Integer.toHexString(year);       
     }//end calc exp date
 
-    private String generatePan()
+    public String generatePan()
     {
         String AB = "0123456789ABCDEF";
         SecureRandom rnd = new SecureRandom();
@@ -554,7 +567,7 @@ public class CloudCoin
         }
         //Calcualte Other RAIDA Servers did not help. 
         switch( other ){
-            case 0: otherDesc = "RAIDA 100% good"; break;
+            case 0: otherDesc = "100% of RAIDA responded"; break;
             case 1: 
             case 2: otherDesc = "Four or less RAIDA errors"; break;
             case 3: 
@@ -596,12 +609,29 @@ public class CloudCoin
             extension = "lost";
         }
 
-        gradeStatus[0] = passedDesc;
-        gradeStatus[1] = failedDesc;
-        gradeStatus[2] = otherDesc;
+        this.gradeStatus[0] = passedDesc;
+        this.gradeStatus[1] = failedDesc;
+        this.gradeStatus[2] = otherDesc;
         return  gradeStatus;
     }//end gradeStatus
 
+    
+    /**
+     * Method setAnsToPans
+     *      * This uses the Ans and the pans so that they do not change
+     * This is insecure and is used for testing only
+     * Progammers use this before they call detect so they do not
+     * destroy the test coin. Do not use this method in production software
+     *
+     */
+    public void setAnsToPans(){
+     for(int i =0; i<25; i++){
+        pans[i] = ans[i];
+        }//end for 25 ans
+    
+    }//end setAnsToPans
+    
+    
     public String fileToString(String pathname) throws IOException {
         File file = new File(pathname);
         StringBuilder fileContents = new StringBuilder((int)file.length());
@@ -625,35 +655,35 @@ public class CloudCoin
             if( pastStatus[i].equalsIgnoreCase("pass")  ){
                 ans[i] = pans[i];
             }else{
-             //Just keep the ans and do not change. Hopefully they are not fracked. 
+                //Just keep the ans and do not change. Hopefully they are not fracked. 
             }
         }//for each guid in coin
     }//end set ans to pans if passed
-    
+
     public void consoleReport(){
-    //Used only for console apps
-    // System.out.println("Finished detecting coin index " + j);
-            //PRINT OUT ALL COIN'S RAIDA STATUS AND SET AN TO NEW PAN
-            System.out.println("");
-            System.out.println("CloudCoin SN #"+sn +", Denomination: "+ getDenomination() );
-            int RAIDAHealth = 25;
-            hp=25;
-            for(int i = 0; i < 25;i++){
-                if ( i % 5 == 0 ) { System.out.println("");}//Give every five statuses a line break
-                pastStatus[i]= pastStatus[i];
-                if( pastStatus[i] == "pass")
-                {    
-                    ans[i] = pans[i];//RAIDA health stays up
-                }
-                else if( pastStatus[i] == "fail")
-                { 
-                    hp--; 
-                }
-                else{
-                    RAIDAHealth--;
-                }//check if failed
-                String fi = String.format("%02d", i);//Pad numbers with two digits
-                System.out.print("RAIDA"+ fi +": "+ pastStatus[i].substring(0,4) + " | " );
-            }//End for each cloud coin GUID statu
+        //Used only for console apps
+        // System.out.println("Finished detecting coin index " + j);
+        //PRINT OUT ALL COIN'S RAIDA STATUS AND SET AN TO NEW PAN
+        System.out.println("");
+        System.out.println("CloudCoin SN #"+sn +", Denomination: "+ getDenomination() );
+        int RAIDAHealth = 25;
+        hp=25;
+        for(int i = 0; i < 25;i++){
+            if ( i % 5 == 0 ) { System.out.println("");}//Give every five statuses a line break
+            pastStatus[i]= pastStatus[i];
+            if( pastStatus[i] == "pass")
+            {    
+                ans[i] = pans[i];//RAIDA health stays up
+            }
+            else if( pastStatus[i] == "fail")
+            { 
+                hp--; 
+            }
+            else{
+                RAIDAHealth--;
+            }//check if failed
+            String fi = String.format("%02d", i);//Pad numbers with two digits
+            System.out.print("RAIDA"+ fi +": "+ pastStatus[i].substring(0,4) + " | " );
+        }//End for each cloud coin GUID statu
     }//end consoleReport
 }//End of class CloudCoin

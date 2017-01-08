@@ -15,88 +15,39 @@ import java.time.*;
  */
 public class DetectionAgent
 {
-    public int readTimeout;//how many mili seconds before saying fuck it, we are done waiting. 
     // instance variables
-    public int[] trustedServers = new int[8];
-    public int[] trustedTriad1;
-    public int[] trustedTriad2;
-    public int[] trustedTriad3;
-    public int[] trustedTriad4;
-
+    public int readTimeout;//how many mili seconds before saying fuck it, we are done waiting. 
     public int RAIDANumber;
-    public String url;
-    public String bkurl; //backup url
-    public String name; 
-    public String status; //unknown, error, slow or ready echo status
-    public long ms; //echo milliseconds
-    public String location; //country
-    public String img; //img url
     public String fullUrl;
-    
+
     //Detection Status
     public String lastDetectStatus = "notdetected";//error, notdetected, pass, fail
     public long dms = 0; //ms to detect
+    
     //Ticket Status
     public String lastTicket = "empty";
     public String lastTicketStatus = "empty";//ticket, fail, error
+    
     //Fix it status
     public String lastFixStatus = "empty";//ticket, fail, error
+    
     //General 
     public String lastRequest = "empty";//Last GET command sent to RAIDA
     public String lastResponse = "empty";//LAST JSON recieved from the RAIDA
 
+  
     /**
-     * Constructor for objects of class RAIDA
+     * DetectionAgent Constructor
+     *
+     * @param readTimeout A parameter that determines how many milliseconds each request will be allowed to take
+     * @param RAIDANumber The number of the RAIDA server 0-24
      */
-    public DetectionAgent( int readTimeout, String url, String bkurl, String name, String status, int ms, String ext, String location, String img, String protocol, int port )
+    public DetectionAgent( int RAIDANumber, int readTimeout  )
     {
-        // initialise instance variables
-        String raidaNumberString = name.replace("RAIDA","");
-        RAIDANumber = Integer.parseInt( raidaNumberString );
-        //Calculate the Trusted Servers
-        // Calculate the 8 trusted servers that are directly attached to broken RAIDA
-        
-        trustedServers[0] = Math.floorMod(RAIDANumber - 6, 25);//T)rusted server 1 is the id of your servers minus 6 mod 25.
-        trustedServers[1] = Math.floorMod(RAIDANumber - 5, 25);
-        trustedServers[2] = Math.floorMod(RAIDANumber - 4, 25);
-        trustedServers[3] = Math.floorMod(RAIDANumber - 1, 25);
-        trustedServers[4] = Math.floorMod(RAIDANumber + 1, 25);
-        trustedServers[5] = Math.floorMod(RAIDANumber + 4, 25);
-        trustedServers[6] = Math.floorMod(RAIDANumber + 5, 25);
-        trustedServers[7] = Math.floorMod(RAIDANumber + 6, 25);
-
-        trustedTriad1 = new int[]{trustedServers[0] , trustedServers[1] , trustedServers[3] };
-        trustedTriad2 = new int[]{trustedServers[1] , trustedServers[2] , trustedServers[4] };
-        trustedTriad3 = new int[]{trustedServers[3] , trustedServers[5] , trustedServers[6] };
-        trustedTriad4 = new int[]{trustedServers[4] , trustedServers[6] , trustedServers[7] };
-
-        this.url = url;
-        this.bkurl = bkurl;
-        this.name = name;
-        this.status = status;//echo status
-        this.ms = (int)ms;
-        this.location = location;
-        this. img = img;
-        this.fullUrl = "https://"+ this.url + "/service/";
+        this.RAIDANumber = RAIDANumber;
+        this.fullUrl = "https://RAIDA"+ RAIDANumber + ".cloudcoin.global/service/";
         this.readTimeout = readTimeout;
     }//Detection Agent Constructor
-
-    //Methods
-    public String echo(){
-        this.status ="error";
-        this.lastRequest = this.fullUrl + "echo";//." + this.ext;
-        Instant before = Instant.now();
-        try{
-            this.lastResponse = getHtml(url);
-        }catch( IOException ex ){
-            this.status = "error";
-            return "error";
-        }
-        Instant after = Instant.now();
-        boolean isReady = this.lastResponse.contains("ready");
-        this.ms = Duration.between(before, after).toMillis();
-        if(isReady){ this.status = "ready"; return "ready"; }else{ this.status = "error"; return "error";}
-    }//end echo
 
     /**
      * Method detect
@@ -110,6 +61,7 @@ public class DetectionAgent
      */
     public String detect( int nn, int sn, String an, String pan, int d){
             this.lastRequest = this.fullUrl + "detect?nn="+nn+"&sn="+sn+"&an="+an+"&pan="+pan+"&denomination="+d;
+           // System.out.println(this.lastRequest);
             Instant before = Instant.now();
             try{
                 this.lastResponse = getHtml( this.lastRequest );
@@ -132,19 +84,23 @@ public class DetectionAgent
 
     public String get_ticket( int nn, int sn, String an, int d )throws MalformedURLException, IOException  { //Will only use ans to fix
         this.lastRequest = fullUrl + "get_ticket?nn="+nn+"&sn="+sn+"&an="+an+"&pan="+an+"&denomination="+d; 
+       
             Instant before = Instant.now();
             this.lastResponse = getHtml( this.lastRequest );
+            
+             //System.out.println(this.lastRequest);
+        //System.out.println(this.lastResponse);
             if ( this.lastResponse.contains("ticket") ){
                 String[] KeyPairs = this.lastResponse.split(",");
-                String message = KeyPairs[4];      
+                String message = KeyPairs[3];      
                 int startTicket = ordinalIndexOf( message, "\"", 3);
-                int endtTicket = ordinalIndexOf( message, "\"", 4);
-                this.lastTicket = message.substring(startTicket, endtTicket);
+                int endTicket = ordinalIndexOf( message, "\"", 4);
+                this.lastTicket = message.substring(startTicket + 1, endTicket);
                 this.lastTicketStatus = "ticket";
                 Instant after = Instant.now(); this.dms = Duration.between(before, after).toMillis();
-                return "ticket";
+                return this.lastTicket;
             }//end if
-  
+         
         return "error";
     }//end get ticket
 
@@ -154,15 +110,20 @@ public class DetectionAgent
         int f1 = triad[0];
         int f2 = triad[1];
         int f3 = triad[2];
-        this.lastRequest += fullUrl+"fix?fromserver1="+f1+"&message1="+m1+"&fromserver2="+f2+"&message2="+m2+"&fromserver3="+f3+"&message3="+m3+"&pan="+pan;
-        
+        this.lastRequest = fullUrl+"fix?fromserver1="+f1+"&message1="+m1+"&fromserver2="+f2+"&message2="+m2+"&fromserver3="+f3+"&message3="+m3+"&pan="+pan;
+        //System.out.println(this.lastRequest);
+
         try{
             Instant before = Instant.now();
             this.lastResponse = getHtml( this.lastRequest );
+            
             Instant after = Instant.now(); this.dms = Duration.between(before, after).toMillis();
+           // System.out.println(this.lastResponse + " " + this.dms );
         }catch( MalformedURLException ex ){//quit
+          //  System.out.println(ex + " " +this.lastResponse);
             return "error";
         } catch( IOException ex ){
+          //  System.out.println(ex + " " +this.lastResponse);
             return "error" ;
         }
     
@@ -170,10 +131,13 @@ public class DetectionAgent
             this.lastFixStatus = "success"; 
             return "success"; 
         }
+        
         return "error"; 
     }//end fixit
 
-    public String getHtml(String url_in) throws MalformedURLException, IOException {
+    
+    //Helper Methods
+    private String getHtml(String url_in) throws MalformedURLException, IOException {
         
         URL cloudCoinGlobal = new URL(url_in);
         URLConnection conn = cloudCoinGlobal.openConnection();
