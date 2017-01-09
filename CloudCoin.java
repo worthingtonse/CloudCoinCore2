@@ -14,7 +14,7 @@ import java.util.Scanner;
  * Creats a CloudCoin
  * 
  * @author Sean H. Worthington
- * @version 12/31/2016
+ * @version 1/8/2016
  */
 public class CloudCoin
 {
@@ -65,8 +65,9 @@ public class CloudCoin
      * CloudCoin Constructor
      *
      * @param loadFilePath Loads files internally so they can be moved around. 
+     * Throws file not found exception or ioexception
      */
-    public CloudCoin( String loadFilePath ){ //If loading from inside
+    public CloudCoin( String loadFilePath ) throws FileNotFoundException, IOException { //If loading from inside
         /*SEE IF FILE IS JPEG OR JSON*/
         int indx = loadFilePath.lastIndexOf('.');
         if (indx > 0) {
@@ -85,7 +86,7 @@ public class CloudCoin
             try {
                 fis = new FileInputStream( loadFilePath );
                 y=fis.read(jpegHeader);// read bytes to the buffer
-                wholeString = toHexadecimal( jpegHeader );
+                wholeString = toHexadecimal( jpegHeader );// System.out.println(wholeString);
                 fis.close(); 
             } catch (FileNotFoundException e) {
                 // TODO Auto-generated catch block
@@ -97,8 +98,7 @@ public class CloudCoin
             int startAn, endAn;
             startAn = 40; endAn = 72;
             for(int i = 0; i< 25; i++){
-                ans[i] = wholeString.substring( startAn +(i*32), endAn +(i*32) );
-                // System.out.println(ans[i]);
+                ans[i] = wholeString.substring( startAn +(i*32), endAn +(i*32) ); // System.out.println(i +": " +ans[i]);
             }//end for
 
             this.aoid = wholeString.substring( 840, 895 );
@@ -207,6 +207,11 @@ public class CloudCoin
     }
 
 
+    /**
+     * Method setJSON creates JSON text version of the coin that can be written to file.
+     *
+     * @return The return value is a String of JSON that can be written to hard drive. 
+     */
     public String setJSON(){   
         this.json = "{" + System.getProperty("line.separator");
         json +=   "\t\"cloudcoin\": [{" + System.getProperty("line.separator") ;
@@ -244,6 +249,11 @@ public class CloudCoin
 
     }//end get JSON
 
+    /**
+     * Method setJpeg creates an array of bytes that can be written to file to make a jpg image based on the CloudCoin
+     *
+     * @param rootFolder This points to the template that will be used to make the jpg image. Templates can be customized.
+     */
     public void setJpeg( String rootFolder){
         byte[] returnBytes =  null;
         //Make byte array from CloudCoin
@@ -252,14 +262,13 @@ public class CloudCoin
             cloudCoinStr += this.ans[i];
         }//end for each an
         // cloudCoinStr +="Defeat tyrants and obey God0"; //27 AOID and comments
-        cloudCoinStr +="204f42455920474f4420262044454645415420545952414e54532000"; //27 AOID and comments
+        cloudCoinStr +="204f42455920474f4420262044454645415420545952414e54532000"; //Hex for " OBEY GOD & DEFEAT TYRANTS "
         cloudCoinStr +="00";//LHC = 100%
-
         cloudCoinStr +="97E2";//0x97E2;//Expiration date Sep. 2018
         cloudCoinStr += "01";// cc.nn;//network number
         String hexSN = Integer.toHexString(this.sn);  
         String fullHexSN ="";
-        switch (hexSN.length())
+        switch (hexSN.length())//Add leading zeros to the hex number
         {
             case 1: fullHexSN = "00000" +hexSN; break;
             case 2:fullHexSN = "0000" +hexSN; break;
@@ -271,13 +280,13 @@ public class CloudCoin
         cloudCoinStr += fullHexSN;
         String Path = "";
         switch( getDenomination() ){
-            case   1:  Path jpeg1 = Paths.get( rootFolder +"jpegs/jpeg1.jpg");
+            case   1:  Path jpeg1 = Paths.get( rootFolder +"jpegs/jpeg1.jpg");//This is the location of the template for 1s
             try{ returnBytes = Files.readAllBytes(jpeg1); }catch(IOException e){
                 System.out.println("General I/O exception: " + e.getMessage()); e.printStackTrace();
             }//end catch
             break;
             case   5: 
-            Path jpeg5 = Paths.get(rootFolder +"jpegs/jpeg5.jpg");
+            Path jpeg5 = Paths.get(rootFolder +"jpegs/jpeg5.jpg");//This is the location of the template for 5s
             try{ returnBytes = Files.readAllBytes(jpeg5); }catch(IOException e){
                 System.out.println("General I/O exception: " + e.getMessage());
                 e.printStackTrace(); }//end catch
@@ -310,6 +319,12 @@ public class CloudCoin
         this.jpeg = returnBytes;
     }//end get jpeg
 
+    /**
+     * Method toHexadecimal
+     *
+     * @param digest An array of bytes that will change into a string of hex characters
+     * @return A string version of the bytes in hex form. 
+     */
     private String toHexadecimal(byte[] digest){
         String hash = "";
         for(byte aux : digest) {
@@ -320,6 +335,19 @@ public class CloudCoin
         return hash;
     }
 
+    /**
+     * Method saveCoin saves the coin as a json file with any file extension you like.
+     * Usually you would use the following extensions: 
+     * suspect (means the coin has not yet been authenticated and could be counterfeit)
+     * bank (means the coin is good)
+     * fractured (means the coin is fractured and should be fixed)
+     * lost (Some of the coin is good but not enough to be useful)
+     * counterfeit (Entire coin is bad)
+     * stack (exported and ready to be given to another person.)
+     *
+     * @param extension The file extension you would like the JSON file to have. 
+     * @return true if saved, false if failed to save.
+     */
     public boolean saveCoin(String extension ){
         boolean goodSave = false;
         setJSON();
@@ -331,7 +359,7 @@ public class CloudCoin
 
         BufferedWriter writer = null;
         try{
-            writer = new BufferedWriter( new FileWriter( "./Bank/" + this.fileName + extension ));
+            writer = new BufferedWriter( new FileWriter( "./bank/" + this.fileName + extension ));
             // System.out.println("\nSaving Coin file to Bank/" + this.fileName + extension );
             writer.write( this.json );
             goodSave = true;
@@ -374,11 +402,11 @@ public class CloudCoin
     }//End calculate hp
 
     /**
-     * Method writeJpeg
+     * Method writeJpeg writes a jpg image to the hard drive. 
      *
      * @param path The full path to the file except the file name.
      * @param tag A parameter that adds a tag to the filename
-     * @return The return value
+     * @return true if file is saved, false if file is not saved
      */
     public boolean writeJpeg( String path, String tag ){  
         boolean writeGood = true;
@@ -480,6 +508,11 @@ public class CloudCoin
         return  "\n " + passedDesc + " said Passed. " + "\n "+ failedDesc +" said Failed. \n RAIDA Status: "+ otherDesc;
     }//end grade coin
 
+    /**
+     * Method calcExpirationDate figures out when the coin will expire (after it has been authenticated)
+     * This value is written to the coin's ed fields. 
+     *
+     */
     public void calcExpirationDate(){
         java.util.Date date= new Date();
         Calendar cal = Calendar.getInstance();
@@ -492,6 +525,11 @@ public class CloudCoin
         this.edHex += Integer.toHexString(year);       
     }//end calc exp date
 
+    /**
+     * Method generatePan creates secure random GUIDs that can be used as pans.
+     *
+     * @return String 32 hex character guid like 8d3eb063937164c789474f2a82c146d3 without hyphens
+     */
     public String generatePan()
     {
         String AB = "0123456789ABCDEF";
@@ -502,6 +540,14 @@ public class CloudCoin
         return sb.toString();
     }
 
+    /**
+     * Method ordinalIndexOf finds the index of the nth occurance of a character in a string.
+     *
+     * @param str The entire string
+     * @param substr The part of the string to count the nth occrance
+     * @param n The number of occurances we want to find. Starts at 1 not zero!
+     * @return The return value
+     */
     private int ordinalIndexOf(String str, String substr, int n) {
         int pos = str.indexOf(substr);
         while (--n > 0 && pos != -1)
@@ -509,6 +555,12 @@ public class CloudCoin
         return pos;
     }
 
+    /**
+     * Method hexStringToByteArray turns a String of hex characters into bytes
+     *
+     * @param s A String of hex characters
+     * @return A byte array that represents the string of hex characters
+     */
     public byte[] hexStringToByteArray(String s) {
         int len = s.length();
         byte[] data = new byte[len / 2];
@@ -519,6 +571,21 @@ public class CloudCoin
         return data;
     }//End of hexString to byte array
 
+    /**
+     * Method gradeStatus does two things: 
+     * 1. Returns a verdic by the RAIDA about which RAIDA think the coin is pass or fail and which RAIDA did not repond.
+     * 2. Lables the coin as:
+     * suspect: Not enough RAIDA to make a determination
+     * bank: Good coin.
+     * fractured: Some raida said failed but the majority said passed
+     * counterfeit: Fails
+     * lost: Some said good but most said fail.  
+     *
+     * @return Returns three stings:
+     * 1. What the passes say.
+     * 2. What the fails say.
+     * 3. The health of the RAIDA.
+     */
     public String[] gradeStatus(){
         int passed = 0;
         int failed = 0;
@@ -618,10 +685,8 @@ public class CloudCoin
     
     /**
      * Method setAnsToPans
-     *      * This uses the Ans and the pans so that they do not change
-     * This is insecure and is used for testing only
-     * Progammers use this before they call detect so they do not
-     * destroy the test coin. Do not use this method in production software
+     * This uses the Ans and the pans so that they do not change
+     * This is used for fixing fractured RAIDA were the RAIDA is assigned the AN
      *
      */
     public void setAnsToPans(){
@@ -632,6 +697,12 @@ public class CloudCoin
     }//end setAnsToPans
     
     
+    /**
+     * Method fileToString turns a file into String
+     *
+     * @param pathname A file
+     * @return The file contents in a String
+     */
     public String fileToString(String pathname) throws IOException {
         File file = new File(pathname);
         StringBuilder fileContents = new StringBuilder((int)file.length());
@@ -649,6 +720,10 @@ public class CloudCoin
         return fileContents.toString();
     }
 
+    /**
+     * Method setAnsToPansIfPassed looks at the past Status to see if the detections passed. If so the AN becomes the PAN.
+     *
+     */
     public void setAnsToPansIfPassed(){
         //now set all ans that passed to the new pans
         for(int i =0; i< 25; i++){
@@ -660,6 +735,10 @@ public class CloudCoin
         }//for each guid in coin
     }//end set ans to pans if passed
 
+    /**
+     * Method consoleReport shows what the detailed results of a detection attempt. 
+     *
+     */
     public void consoleReport(){
         //Used only for console apps
         // System.out.println("Finished detecting coin index " + j);
