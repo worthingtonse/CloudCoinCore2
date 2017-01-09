@@ -158,6 +158,7 @@ public class CommandInterpreter{
             return;
         }else{
             bank.importAllInFolder( loadFileName );
+            fixFracked();
         }
         showCoins();
     }//end import
@@ -274,11 +275,13 @@ public class CommandInterpreter{
         bank.totalValueToCounterfeit=0;
         bank.frackedCoins = bank.loadCoinArray( rootFolder,"fracked");
 
-        System.out.println("Loaded " + bank.frackedCoins.length + " fracked files");
+        System.out.println("You  have " + bank.frackedCoins.length + " fracked coins.");
         /* LOOP THROUGH EVERY COIN THAT IS FRACKED */
         for(int k = 0; k < bank.frackedCoins.length; k++){
             //frackedCoins[k].reportStatus();
             System.out.println("Unfracking SN #"+bank.frackedCoins[k].sn +", Denomination: "+ bank.frackedCoins[k].getDenomination() );
+            System.out.println("This may take a minute or two." );
+       
             bank.raida.fixCoin( bank.frackedCoins[k] );//Checks all 25 GUIDs in the Coin and sets the status.
 
             //Check CloudCoin's hp. 
