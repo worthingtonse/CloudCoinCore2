@@ -19,7 +19,7 @@ public class CommandInterpreter{
 
         run();//Makes all commands available and loops
 
-        System.out.println("Thank you for using CloudCoin Foundation. Goodbye.");
+        System.out.println("Thank you for using CloudCoin Core. Goodbye.");
     }//End main
 
     public static void run() {
@@ -50,9 +50,7 @@ public class CommandInterpreter{
         }//end while
     }//end run method
 
-    
-    
-    
+
     /**
      * Print out the opening message for the player. 
      */
@@ -78,7 +76,24 @@ public class CommandInterpreter{
         total_100 =  bank.countCoins( bankedCoins, 100 );
         total_250 =  bank.countCoins( bankedCoins, 250 );
 
-        System.out.println("Your Bank Inventory:");
+        CloudCoin[] frackedCoins = bank.loadCoinArray( rootFolder ,"fracked");
+        if( frackedCoins.length > 0 ){
+            total_1 +=  bank.countCoins( frackedCoins, 1  );
+            total_5 +=  bank.countCoins( frackedCoins, 5  );
+            total_25 +=  bank.countCoins( frackedCoins, 25  );
+            total_100 +=  bank.countCoins( frackedCoins, 100  );
+            total_250 +=  bank.countCoins( frackedCoins, 250  );
+            //  System.out.println("Your fracked Inventory:");
+            // System.out.print("  1s: "+ total_1  +" || ");
+            // System.out.print("  5s: "+ total_5  +" ||");
+            //  System.out.print(" 25s: "+ total_25 +" ||" );
+            //  System.out.print("100s: "+ total_100+" ||");
+            //  System.out.println("250s: "+ total_250 );
+
+            //}else{
+           // System.out.println("No fractured coins. " );
+        }
+        System.out.println("Your Bank Inventory:");            
         int grandTotal = ( total_1*1 )+ ( total_5 * 5 ) + ( total_25 * 25 ) + ( total_100 * 100 ) + ( total_250 * 250 ); 
         System.out.println("Total: " + grandTotal );
         System.out.print("  1s: "+ total_1  +" || ");
@@ -87,45 +102,8 @@ public class CommandInterpreter{
         System.out.print("100s: "+ total_100+" ||");
         System.out.println("250s: "+ total_250 );
 
-        CloudCoin[] frackedCoins = bank.loadCoinArray( rootFolder ,"fracked");
-        if( frackedCoins.length > 0 ){
-            total_1 =  bank.countCoins( frackedCoins, 1  );
-            total_5 =  bank.countCoins( frackedCoins, 5  );
-            total_25 =  bank.countCoins( frackedCoins, 25  );
-            total_100 =  bank.countCoins( frackedCoins, 100  );
-            total_250 =  bank.countCoins( frackedCoins, 250  );
-
-            System.out.println("Your fracked Inventory:");
-            System.out.print("  1s: "+ total_1  +" || ");
-            System.out.print("  5s: "+ total_5  +" ||");
-            System.out.print(" 25s: "+ total_25 +" ||" );
-            System.out.print("100s: "+ total_100+" ||");
-            System.out.println("250s: "+ total_250 );
-
-        }else{
-            System.out.println("No fractured coins. " );
-        }
-        //if has fracked coins
-        //get all names in the folder
-        //state how many 1, 5, 25, 100 and 250
-        CloudCoin[] lostCoins = bank.loadCoinArray( rootFolder ,"lost");
-        if( lostCoins.length > 0 ){
-            total_1 =  bank.countCoins( lostCoins, 1 );
-            total_5 =  bank.countCoins( lostCoins, 5 );
-            total_25 =  bank.countCoins( lostCoins, 25 );
-            total_100 =  bank.countCoins( lostCoins, 100 );
-            total_250 =  bank.countCoins( lostCoins, 250 );
-
-            System.out.println("Your lost Inventory:");
-            System.out.print("  1s: "+ total_1  +" || ");
-            System.out.print("  5s: "+ total_5  +" ||");
-            System.out.print(" 25s: "+ total_25 +" ||" );
-            System.out.print("100s: "+ total_100+" ||");
-            System.out.println("250s: "+ total_250 );
-
-        }else{
-            System.out.println("No lost coins. " );
-        }
+        
+        
         CloudCoin[] counterfeitCoins = bank.loadCoinArray( rootFolder ,"counterfeit");
         if( counterfeitCoins.length > 0 ){
             total_1 =  bank.countCoins( counterfeitCoins, 1 );
@@ -149,17 +127,19 @@ public class CommandInterpreter{
     }//end show
 
     public static void importCoins(){
-        System.out.println("Loading all CloudCoins in your import folder: What is the path to your import folder?");
-        String loadFileName = reader.readString( false );   
+        System.out.println("Loading all CloudCoins in your import folder: What is the path to your import folder? eg c:\\import\\");
+        String loadDirectoryName = reader.readString( false );   
         //Check to see if folder exists and that folder is not empty. 
-        File f = new File( loadFileName );
-        if (f.exists() && f.isDirectory()) {
-            System.out.println( loadFileName + " not found. Please check your file name and try again."); 
+        File f = new File( loadDirectoryName );
+        if ( !f.exists() || !f.isDirectory()) {
+            System.out.println( loadDirectoryName + " not found. Please check your file name and try again."); 
             return;
         }else{
-            bank.importAllInFolder( loadFileName );
+            bank.importAllInFolder( loadDirectoryName );
+            bank.detectAuthenticity( );
             fixFracked();
         }
+
         showCoins();
     }//end import
 
@@ -265,13 +245,11 @@ public class CommandInterpreter{
 
         System.out.println("Exporting CloudCoins Completed.");
     }//end export One
-    
-    
+
     public static void fixFracked(){
         //Load coins from file in to banks fracked array
         bank.totalValueToBank = 0;
         bank.totalValueToFractured = 0;
-        bank.totalValueLost = 0;
         bank.totalValueToCounterfeit=0;
         bank.frackedCoins = bank.loadCoinArray( rootFolder,"fracked");
 
@@ -281,7 +259,7 @@ public class CommandInterpreter{
             //frackedCoins[k].reportStatus();
             System.out.println("Unfracking SN #"+bank.frackedCoins[k].sn +", Denomination: "+ bank.frackedCoins[k].getDenomination() );
             System.out.println("This may take a minute or two." );
-       
+
             bank.raida.fixCoin( bank.frackedCoins[k] );//Checks all 25 GUIDs in the Coin and sets the status.
 
             //Check CloudCoin's hp. 
@@ -306,7 +284,6 @@ public class CommandInterpreter{
             switch( bank.frackedCoins[k].extension ){
                 case "bank": bank.totalValueToBank++; break;
                 case "fractured": bank.totalValueToFractured++; break;
-                case "lost": bank.totalValueLost++; break;
                 case "counterfeit": bank.totalValueToCounterfeit++; break;
             }//end for each guid
         }//end for each fracked coin
@@ -315,6 +292,5 @@ public class CommandInterpreter{
         System.out.println("Good and Moved in Bank: "+ bank.totalValueToBank);
         System.out.println("Counterfeit and Moved to trash: "+bank.totalValueToCounterfeit);
         System.out.println("Still Fracked and Moved to Fracked: "+ bank.totalValueToFractured);
-        System.out.println("Lost and Moved to Lost: "+ bank.totalValueLost);
     }//end fix fracked
 }//EndMain

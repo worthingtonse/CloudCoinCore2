@@ -14,7 +14,7 @@ import java.util.Scanner;
  * Creats a CloudCoin
  * 
  * @author Sean H. Worthington
- * @version 1/8/2016
+ * @version 1/9/2016
  */
 public class CloudCoin
 {
@@ -32,7 +32,7 @@ public class CloudCoin
     public String json;
     public byte[] jpeg;
     public static final int YEARSTILEXPIRE = 2;
-    public String extension; //"suspect", "bank", "lost", "fracked", "counterfeit"
+    public String extension; //"suspect", "bank", "fracked", "counterfeit"
     public String[] gradeStatus = new String[3];//What passed, what failed, what was undetected
 
     /**
@@ -341,7 +341,6 @@ public class CloudCoin
      * suspect (means the coin has not yet been authenticated and could be counterfeit)
      * bank (means the coin is good)
      * fractured (means the coin is fractured and should be fixed)
-     * lost (Some of the coin is good but not enough to be useful)
      * counterfeit (Entire coin is bad)
      * stack (exported and ready to be given to another person.)
      *
@@ -579,7 +578,6 @@ public class CloudCoin
      * bank: Good coin.
      * fractured: Some raida said failed but the majority said passed
      * counterfeit: Fails
-     * lost: Some said good but most said fail.  
      *
      * @return Returns three stings:
      * 1. What the passes say.
@@ -662,19 +660,25 @@ public class CloudCoin
             case 25: otherDesc = "RAIDA total failure"; break;
             default: otherDesc = "FAILED TO EVALUATE RAIDA HEALTH"; break;
         }//end RAIDA other errors and unknowns
-        //Coin will go to bank, counterfeit, lost or fracked
+        //Coin will go to bank, counterfeit or fracked
 
-        if(other > 12){//not enough RAIDA to have quorum
-            extension = "suspect";
-        }else if( passed == 0 && failed > 1 ){//Nothing passed, something failed Counterfeit
-            extension = "counterfeit";
-        }else if( failed == 0){ //no fails so assumes all good. 
-            extension = "bank";
-        }else if(passed > failed ){//We have some fails 
-            extension = "fracked";
-        }else{
-            extension = "lost";
+        if(other > 12)
+        {//not enough RAIDA to have a quorum
+            this.extension = "suspect";
         }
+        else if( failed > passed )
+        {//failed out numbers passed with a quorum: Counterfeit
+            this.extension = "counterfeit";
+        }
+        else if( failed > 0)
+        { //The quorum majority said the coin passed but some disagreed: fracked. 
+            this.extension = "fracked";
+        }
+        else
+        {//No fails, all passes: bank
+            this.extension = "bank";
+        }
+    
 
         this.gradeStatus[0] = passedDesc;
         this.gradeStatus[1] = failedDesc;
