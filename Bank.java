@@ -79,14 +79,21 @@ public class Bank
     public int[] detectAuthenticity(){
         //LOAD THE .suspect COINS ONE AT A TIME AND TEST THEM
         String[] suspectFileNames  = selectAllFileNamesInBank( "suspect" );
+        int totalValueToBank = 0;
+        int totalValueToCounterfeit = 0;
+        int totalValueToFractured = 0;
+        
         int[] results = new int[3];
 
         CloudCoin newCC;
         for(int j = 0; j < suspectFileNames.length; j++){
             try{
-                System.out.println("Construct Coin: "+rootFolder + suspectFileNames[j]);
-                newCC = new CloudCoin( rootFolder + suspectFileNames[j]);//System.out.println("Detecting SN #"+ newCC.sn +", Denomination: "+ newCC.getDenomination() );
+                //System.out.println("Construct Coin: "+rootFolder + suspectFileNames[j]);
+                newCC = new CloudCoin( rootFolder + suspectFileNames[j]);
+                System.out.println("Detecting SN #"+ newCC.sn +", Denomination: "+ newCC.getDenomination() );
                 CloudCoin detectedCC =  raida.detectCoin( newCC );//Checks all 25 GUIDs in the Coin and sets the status. 
+                detectedCC.saveCoin( detectedCC.extension );//save coin as bank
+                deleteCoin( rootFolder + suspectFileNames[j] );
                 switch( detectedCC.extension ){
                     case "bank": totalValueToBank++; break;
                     case "fractured": totalValueToFractured++; break;//fracked still ads value to the bank
@@ -99,8 +106,6 @@ public class Bank
         results[0] = totalValueToBank; 
         results[1] = totalValueToCounterfeit; //System.out.println("Counterfeit and Moved to trash: "+totalValueToCounterfeit);
         results[2] = totalValueToFractured;//System.out.println("Fracked and Moved to Fracked: "+ totalValueToFractured);
-
-
         return results;
     }//end detectAuthenticity
 
@@ -303,6 +308,7 @@ public class Bank
             importOneFile( directory, fileNames[i] );
             //   }catch(){}catch(){}//end try catch make coin 
         }//end for each file name
+        
         //If the file is a j
     }//end import
 
@@ -333,12 +339,6 @@ public class Bank
 
         //change imported file to have a .imported extention
         renameFileExtension(loadFileName, "suspect" );
-
-        //LOAD THE .income COINS ONE AT A TIME AND TEST THEM
-        String[] incomeFileNames  = selectAllFileNamesInBank( "suspect" );
-        //System.out.println("Loaded " + incomeFileNames.length + " income files");
-        //detectAuthenticity( );//Checks all Coins in the folder. 
-
         return true;
     }//end import
 
@@ -407,12 +407,12 @@ public class Bank
      */
     public boolean importStack( String directory, String loadFilePath ) {  
         boolean isSuccessful = false;
-        System.out.println("Trying to load: " + directory + loadFilePath );
+       // System.out.println("Trying to load: " + directory + loadFilePath );
         String incomeJson = ""; 
         // String new fileName = coinCount +".CloudCoin.New"+ rand.nextInt(5000) + "";
         try{
             incomeJson = loadJSON( directory + loadFilePath );
-            System.out.println(incomeJson);
+          //  System.out.println(incomeJson);
         }catch( IOException ex ){
             System.out.println( "error " + ex );
         }
@@ -432,7 +432,7 @@ public class Bank
                String aoid = "";//Wipe any old owner notes
                 //this.newCoins[i] = new CloudCoin( nn, sn, toStringArray(an), ed, aoid, security );//This could cause memory issues.   
                 tempCoin = new CloudCoin( nn, sn, toStringArray(an), ed, "", "suspect" );//security should be change or keep for pans.
-                tempCoin.consoleReport();
+                //tempCoin.consoleReport();
                 tempCoin.saveCoin("suspect");//Put in bank folder with suspect extension
                 moveFileToImported( directory, loadFilePath, "imported");
             }//end for each coin
