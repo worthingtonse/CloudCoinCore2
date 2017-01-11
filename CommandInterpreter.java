@@ -62,63 +62,28 @@ public class CommandInterpreter{
 
     public static void showCoins(){
         //This is for consol apps.
-        int total_1 =  0;
-        int total_5 =  0;
-        int total_25 = 0;
-        int total_100 =  0;
-        int total_250 =  0;
-
-        //System.out.println("'\nRoot folder is " + rootFolder);
-        CloudCoin[] bankedCoins = bank.loadCoinArray( rootFolder ,"bank");
-        total_1 =  bank.countCoins( bankedCoins, 1 );
-        total_5 =  bank.countCoins( bankedCoins, 5 );
-        total_25 =  bank.countCoins( bankedCoins, 25 );
-        total_100 =  bank.countCoins( bankedCoins, 100 );
-        total_250 =  bank.countCoins( bankedCoins, 250 );
-
-        CloudCoin[] frackedCoins = bank.loadCoinArray( rootFolder ,"fracked");
-        if( frackedCoins.length > 0 ){
-            total_1 +=  bank.countCoins( frackedCoins, 1  );
-            total_5 +=  bank.countCoins( frackedCoins, 5  );
-            total_25 +=  bank.countCoins( frackedCoins, 25  );
-            total_100 +=  bank.countCoins( frackedCoins, 100  );
-            total_250 +=  bank.countCoins( frackedCoins, 250  );
-            //  System.out.println("Your fracked Inventory:");
-            // System.out.print("  1s: "+ total_1  +" || ");
-            // System.out.print("  5s: "+ total_5  +" ||");
-            //  System.out.print(" 25s: "+ total_25 +" ||" );
-            //  System.out.print("100s: "+ total_100+" ||");
-            //  System.out.println("250s: "+ total_250 );
-
-            //}else{
-           // System.out.println("No fractured coins. " );
-        }
+        int[] bankTotals = bank.countCoins(rootFolder ,"bank");
+        int[] frackedTotals = bank.countCoins(rootFolder ,"fracked");
+        int[] counterfeitTotals = bank.countCoins(rootFolder ,"counterfeit");
+       
         System.out.println("Your Bank Inventory:");            
-        int grandTotal = ( total_1*1 )+ ( total_5 * 5 ) + ( total_25 * 25 ) + ( total_100 * 100 ) + ( total_250 * 250 ); 
+        int grandTotal = bankTotals[0] + frackedTotals[0]  ; 
         System.out.println("Total: " + grandTotal );
-        System.out.print("  1s: "+ total_1  +" || ");
-        System.out.print("  5s: "+ total_5  +" ||");
-        System.out.print(" 25s: "+ total_25 +" ||" );
-        System.out.print("100s: "+ total_100+" ||");
-        System.out.println("250s: "+ total_250 );
-
+        System.out.print("  1s: "+ (bankTotals[1] + frackedTotals[1]) + " || ");
+        System.out.print("  5s: "+ (bankTotals[2] + frackedTotals[2]) + " ||");
+        System.out.print(" 25s: "+ (bankTotals[3] + frackedTotals[3]) + " ||" );
+        System.out.print("100s: "+ (bankTotals[4] + frackedTotals[4]) + " ||");
+        System.out.println("250s: "+ (bankTotals[5] + frackedTotals[5])  );
         
         
-        CloudCoin[] counterfeitCoins = bank.loadCoinArray( rootFolder ,"counterfeit");
-        if( counterfeitCoins.length > 0 ){
-            total_1 =  bank.countCoins( counterfeitCoins, 1 );
-            total_5 =  bank.countCoins( counterfeitCoins, 5 );
-            total_25 =  bank.countCoins( counterfeitCoins, 25 );
-            total_100 =  bank.countCoins( counterfeitCoins, 100 );
-            total_250 =  bank.countCoins( counterfeitCoins, 250 );
-
+        if( counterfeitTotals[0] > 0 ){//if there is some counterfeits
             System.out.println("Your counterfeit Inventory:");
-            System.out.print("  1s: "+ total_1  +" || ");
-            System.out.print("  5s: "+ total_5  +" ||");
-            System.out.print(" 25s: "+ total_25 +" ||" );
-            System.out.print("100s: "+ total_100+" ||");
-            System.out.println("250s: "+ total_250 );
-
+        System.out.println("Total: " + grandTotal );
+        System.out.print("  1s: "+ counterfeitTotals[1] + " || ");
+        System.out.print("  5s: "+ counterfeitTotals[2] + " ||");
+        System.out.print(" 25s: "+ counterfeitTotals[3] + " ||" );
+        System.out.print("100s: "+ counterfeitTotals[4] + " ||");
+        System.out.println("250s: "+ counterfeitTotals[5]  );
         }else{
             System.out.println("No counterfeit coins. " );
         }
@@ -127,17 +92,21 @@ public class CommandInterpreter{
     }//end show
 
     public static void importCoins(){
-        System.out.println("Loading all CloudCoins in your import folder: What is the path to your import folder? eg c:\\import\\");
-        String loadDirectoryName = reader.readString( false );   
+        System.out.println("Loading all CloudCoins in your import folder: c:\\import\\");
+        String loadDirectoryName = "c:\\import\\";//reader.readString( false );   
         //Check to see if folder exists and that folder is not empty. 
         File f = new File( loadDirectoryName );
         if ( !f.exists() || !f.isDirectory()) {
             System.out.println( loadDirectoryName + " not found. Please check your file name and try again."); 
             return;
         }else{
-            bank.importAllInFolder( loadDirectoryName );
-            bank.detectAuthenticity( );
-            fixFracked();
+            bank.importAllInFolder( loadDirectoryName );//Move all coins to the bank folder and give them a .suspect name. 
+            int[] detectionResults =  bank.detectAuthenticity( );//Get all the .suspect files in the bank folder and check them for authenticity. 
+            
+            System.out.println("Total Received in bank: " + (detectionResults[0] + detectionResults[2]) );//And the bank and the fractured for total
+            System.out.println("Total Counterfeit: " + detectionResults[1]);
+
+           // fixFracked(); Change later
         }
 
         showCoins();
@@ -152,8 +121,8 @@ public class CommandInterpreter{
         System.out.println("5. Income (Coins that have not been detected yet)");
         //String[] answers = {"bank","lost","counterfeit","fracked","income"};
         int exportAll = reader.readInt( 1, 5 );
-        System.out.println("What is the path and folder you want to store it in? eg. c:\\temp");
-        String jsonpath2 = reader.readString(false);
+        System.out.println("Exporting to your export folder: c:\\export\\");
+        String jsonpath2 = "c:\\export"; //reader.readString(false);
         System.out.println("What tag will you add to the file?");
         String tag2 = reader.readString(false);
 
@@ -182,20 +151,19 @@ public class CommandInterpreter{
     }//end export all
 
     public static void export(){
-        // System.out.println("Root folder is " + rootFolder);
-        bank.bankedCoins = bank.loadCoinArray( rootFolder ,"bank");
-        int total_1 =  bank.countCoins( bank.bankedCoins, 1 );
-        int total_5 =  bank.countCoins( bank.bankedCoins, 5 );
-        int total_25 =  bank.countCoins( bank.bankedCoins, 25 );
-        int total_100 =  bank.countCoins( bank.bankedCoins, 100 );
-        int total_250 =  bank.countCoins( bank.bankedCoins, 250 );
-
-        System.out.println("Your Bank Inventory:");
-        System.out.println("  1s: "+ total_1);
-        System.out.println("  5s: "+ total_5);
-        System.out.println(" 25s: "+ total_25 );
-        System.out.println("100s: "+ total_100);
-        System.out.println("250s: "+ total_250 );
+        
+        int[] bankTotals = bank.countCoins(rootFolder ,"bank");
+        int[] frackedTotals = bank.countCoins(rootFolder ,"fracked");
+       
+        System.out.println("Your Bank Inventory:");            
+        int grandTotal = bankTotals[0] + frackedTotals[0]  ; 
+        System.out.println("Total: " + grandTotal );
+        System.out.print("  1s: "+ (bankTotals[1] + frackedTotals[1]) + " || ");
+        System.out.print("  5s: "+ (bankTotals[2] + frackedTotals[2]) + " ||");
+        System.out.print(" 25s: "+ (bankTotals[3] + frackedTotals[3]) + " ||" );
+        System.out.print("100s: "+ (bankTotals[4] + frackedTotals[4]) + " ||");
+        System.out.println("250s: "+ (bankTotals[5] + frackedTotals[5])  );
+        
         //get all names in the folder
         //state how many 1, 5, 25, 100 and 250
         int exp_1, exp_5, exp_25, exp_100, exp_250;
@@ -208,38 +176,38 @@ public class CommandInterpreter{
         System.out.println("Do you want to export your CloudCoin to (1)jpgs or (2) stack (JSON) file?");
         int file_type = reader.readInt(1,2 ); //1 jpg 2 stack
 
-        if( total_1 > 0 ){
+        if( bankTotals[1] + frackedTotals[1] > 0 ){
             System.out.println("How many 1s do you want to export?");
-            exp_1 = reader.readInt(0,total_1 );
+            exp_1 = reader.readInt(0,bankTotals[1] + frackedTotals[1]  );
         }//if 1s not zero 
-        if( total_5 > 0 ){
+        if( bankTotals[2] + frackedTotals[2] > 0 ){
             System.out.println("How many 5s do you want to export?");
-            exp_5 = reader.readInt(0,total_5 );
+            exp_5 = reader.readInt(0,bankTotals[2] + frackedTotals[2]  );
         }//if 1s not zero 
-        if( total_25 > 0 ){
+        if( bankTotals[3] + frackedTotals[3] > 0 ){
             System.out.println("How many 25s do you want to export?");
-            exp_25 = reader.readInt(0,total_25 );
+            exp_25 = reader.readInt(0,bankTotals[3] + frackedTotals[3]  );
         }//if 1s not zero 
-        if( total_100 > 0 ){
+        if( bankTotals[4] + frackedTotals[4] > 0 ){
             System.out.println("How many 100s do you want to export?");
-            exp_100 = reader.readInt(0,total_100 );
+            exp_100 = reader.readInt(0,bankTotals[4] + frackedTotals[4]  );
         }//if 1s not zero 
-        if( total_250 > 0 ){
+        if( bankTotals[5] + frackedTotals[5] > 0 ){
             System.out.println("How many 250s do you want to export?");
-            exp_250 = reader.readInt(0,total_250 );
+            exp_250 = reader.readInt(0,bankTotals[5] + frackedTotals[5]  );
         }//if 1s not zero 
 
         //move to export
-        System.out.println("What is the path and folder you want to store it in? eg. c:\\temp");
-        String jsonpath = reader.readString(false);
+        System.out.println("Exporting to: c:\\export\\");
+        String directory = "c:\\export\\";//reader.readString(false);
         System.out.println("What tag will you add to the file?");
         String tag = reader.readString(false);
 
         if( file_type == 2){
-            bank.exportJson(exp_1, exp_5, exp_25, exp_100, exp_250, tag);
+            bank.exportJson(exp_1, exp_5, exp_25, exp_100, exp_250, tag, directory);
             //stringToFile( json, "test.txt");
         }else{
-            bank.exportJpeg(exp_1, exp_5, exp_25, exp_100, exp_250, tag);
+            bank.exportJpeg(exp_1, exp_5, exp_25, exp_100, exp_250, tag, directory);
 
         }//end if type jpge or stack
 

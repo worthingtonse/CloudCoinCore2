@@ -75,7 +75,7 @@ public class CloudCoin
         }
         extension = extension.toLowerCase();
 
-        //System.out.println("Loading file: " + loadFilePath);
+        System.out.println("Loading file: " + loadFilePath);
         if( extension.equals("jpeg") || extension.equals("jpg")){//JPEG
             FileInputStream fis;
             int y = 0;
@@ -232,7 +232,7 @@ public class CloudCoin
         }//end for 25 ans
         json += "\"]," + System.getProperty("line.separator");
         json += "\t\t\"ed\":\"9-2016\"," + System.getProperty("line.separator");
-        json += "\t\t\"aoid\": []" + System.getProperty("line.separator");
+        json += "\t\t\"aoid\": ["+aoid+"]" + System.getProperty("line.separator");
         json += "\t}] "+ System.getProperty("line.separator"); 
         json += "}";  
 

@@ -18,7 +18,7 @@ import java.io.File;
  * The Bank tracks the entire contents of the Bank folder used to manage multiple CloudCoins
  * 
  * @author Sean H. Worthington
- * @version 1/9/2016
+ * @version 1/10/2016
  */
 public class Bank
 {
@@ -26,8 +26,8 @@ public class Bank
     private final String rootFolder;
     public RAIDA raida;
 
-    public CloudCoin[] bankedCoins;
-    public CloudCoin[] counterfeitCoins;
+    //public CloudCoin[] bankedCoins;
+    //public CloudCoin[] counterfeitCoins;
     public CloudCoin[] frackedCoins;
     public CloudCoin[] exportCoins;
 
@@ -48,14 +48,23 @@ public class Bank
     /**
      * METHODS
      */
-    public int countCoins( CloudCoin[] coins, int denomination ){
+    public int[] countCoins( String directoryPath, String extension ){
         int totalCount =  0;
-        for(int i = 0 ; i < coins.length; i++){
-            if( coins[i].getDenomination() == denomination ){
-                totalCount++;
-            }//end if coin is the denomination
+        int[] returnCounts = new int[6];//0. Total, 1.1s, 2,5s, 3.25s 4.100s, 5.250s
+        String[] fileNames = selectFileNamesWithSameExtension(directoryPath, extension);
+        for(int i = 0 ; i < fileNames.length; i++){
+            String[] nameParts = fileNames[i].split("\\.");
+            String denomination = nameParts[0];
+            switch( denomination ){
+                case "1": returnCounts[0] += 1; returnCounts[1]+= 1; break;
+                case "5": returnCounts[0] += 5; returnCounts[2]+= 5; break;
+                case "25": returnCounts[0] += 25; returnCounts[3]+= 25; break;
+                case "100": returnCounts[0] += 100; returnCounts[4]+= 100; break;
+                case "250": returnCounts[0] += 250; returnCounts[5]+= 250; break;  
+            }//end switch
+
         }//end for each coin
-        return totalCount;
+        return returnCounts;
     }//end count coins
 
     public boolean deleteCoin( String path ){
@@ -82,7 +91,7 @@ public class Bank
         int totalValueToBank = 0;
         int totalValueToCounterfeit = 0;
         int totalValueToFractured = 0;
-        
+
         int[] results = new int[3];
 
         CloudCoin newCC;
@@ -92,7 +101,9 @@ public class Bank
                 newCC = new CloudCoin( rootFolder + suspectFileNames[j]);
                 System.out.println("Detecting SN #"+ newCC.sn +", Denomination: "+ newCC.getDenomination() );
                 CloudCoin detectedCC =  raida.detectCoin( newCC );//Checks all 25 GUIDs in the Coin and sets the status. 
+                
                 detectedCC.saveCoin( detectedCC.extension );//save coin as bank
+                detectedCC.consoleReport();
                 deleteCoin( rootFolder + suspectFileNames[j] );
                 switch( detectedCC.extension ){
                     case "bank": totalValueToBank++; break;
@@ -144,17 +155,21 @@ public class Bank
         return jsonExported;
     }//end export
 
-    public void exportJpeg(int m1, int m5, int m25, int m100, int m250, String tag ){
+    public void exportJpeg(int m1, int m5, int m25, int m100, int m250, String tag, String directory ){
         boolean jsonExported = true;
         int totalSaved = m1 + ( m5 * 5 ) + ( m25 * 25 ) + (m100 * 100 ) + ( m250  * 250 );//Track the total coins
         int coinCount = m1 + m5 + m25 + m100 + m250;
         /* CONSRUCT JSON STRING FOR SAVING */
         String[] coinsToDelete =  new String[coinCount];
-        String[] bankedFileNames = selectAllFileNamesInBank("bank");//list all file names with bank extensio
+        String[] bankedFileNames = selectAllFileNamesInBank("bank");//list all file names with bank extension
+        String[] frackedFileNames = selectAllFileNamesInBank("fracked");//list all file names with bank extension
+        bankedFileNames = concatArrays(bankedFileNames, frackedFileNames);//Add the two arrays together
+
+        
         String r = rootFolder;
         String b = "bank";
         String t = tag;
-        String p = rootFolder;
+        String p = directory;
         /* SET JPEG, WRITE JPEG and DELETE CLOUDCOINS*/
         int c = 0;//c= counter
         String d ="";   
@@ -165,9 +180,9 @@ public class Bank
             try{
 
                 if( d.equals("1") && m1 > 0 ){ 
-                    jpgCoin = new CloudCoin( bankedFileNames[i] );
+                    jpgCoin = new CloudCoin( rootFolder + bankedFileNames[i] );
                     jpgCoin.setJpeg(r); 
-                    if( jpgCoin.writeJpeg(p,t)){
+                    if( jpgCoin.writeJpeg(p,t)){ 
                         jpgCoin.deleteCoin(r,b); }
                     m1--;
                 }//end if coin is a 1
@@ -197,13 +212,15 @@ public class Bank
         }//for each 1 note  
     }//end export
 
-    public boolean exportJson( int m1, int m5, int m25, int m100, int m250, String tag){
+    public boolean exportJson( int m1, int m5, int m25, int m100, int m250, String tag, String directory){
         boolean jsonExported = true;
         int totalSaved = m1 + ( m5 * 5 ) + ( m25 * 25 ) + (m100 * 100 ) + ( m250  * 250 );//Track the total coins
         int coinCount = m1 + m5 + m25 + m100 + m250;
         /* CONSRUCT JSON STRING FOR SAVING */
         String[] coinsToDelete =  new String[coinCount];
         String[] bankedFileNames = selectAllFileNamesInBank("bank");//list all file names with bank extension
+        String[] frackedFileNames = selectAllFileNamesInBank("fracked");//list all file names with bank extension
+        bankedFileNames = concatArrays(bankedFileNames, frackedFileNames);//Add the two arrays together
 
         //Check to see the denomination by looking at the file start
         int c = 0;//c= counter
@@ -251,12 +268,17 @@ public class Bank
             filename = rootFolder + File.separator + totalSaved +".CloudCoins." + tag + tagrand + ".stack";
         }//end if file exists
 
-        /* DELETE EXPORTED CC FROM BANK */ 
-        for(int cc = 0; cc < coinsToDelete.length; cc++){
-            // System.out.println("Deleting "+ path + coinsToDelete[cc].fileName + "bank");
-            deleteCoin( coinsToDelete[cc] );
-        }//end for
+        if ( stringToFile( json, directory + filename ) ){
+            /* DELETE EXPORTED CC FROM BANK */ 
+            for(int cc = 0; cc < coinsToDelete.length; cc++){
+                // System.out.println("Deleting "+ path + coinsToDelete[cc].fileName + "bank");
+                deleteCoin( coinsToDelete[cc] );
+            }//end for
 
+        }else{
+            //Write Failed
+            jsonExported = false;
+        }//end if write was good
         return jsonExported;
     }//end export
 
@@ -308,7 +330,7 @@ public class Bank
             importOneFile( directory, fileNames[i] );
             //   }catch(){}catch(){}//end try catch make coin 
         }//end for each file name
-        
+
         //If the file is a j
     }//end import
 
@@ -327,12 +349,12 @@ public class Bank
 
         if( jpg ){
             if( ! importJpeg( directory , loadFileName )){ 
-                System.out.println("Failed to load JPEG file");
+               // System.out.println("Failed to load JPEG file");
                 return false;
             }
         }else{
             if( ! importStack( directory , loadFileName )){ 
-                System.out.println("Failed to load .stack file");
+               // System.out.println("Failed to load .stack file");
                 return false;
             }
         }//end if jpg
@@ -407,12 +429,12 @@ public class Bank
      */
     public boolean importStack( String directory, String loadFilePath ) {  
         boolean isSuccessful = false;
-       // System.out.println("Trying to load: " + directory + loadFilePath );
+        // System.out.println("Trying to load: " + directory + loadFilePath );
         String incomeJson = ""; 
         // String new fileName = coinCount +".CloudCoin.New"+ rand.nextInt(5000) + "";
         try{
             incomeJson = loadJSON( directory + loadFilePath );
-          //  System.out.println(incomeJson);
+            //  System.out.println(incomeJson);
         }catch( IOException ex ){
             System.out.println( "error " + ex );
         }
@@ -428,8 +450,8 @@ public class Bank
                 JSONArray an = childJSONObject.getJSONArray("an");
                 String ed     = childJSONObject.getString("ed");
                 //JSONArray aoid = childJSONObject.getJSONArray("aoid");
-               // String[] aoids = toStringArray(aoid)
-               String aoid = "";//Wipe any old owner notes
+                // String[] aoids = toStringArray(aoid)
+                String aoid = "";//Wipe any old owner notes
                 //this.newCoins[i] = new CloudCoin( nn, sn, toStringArray(an), ed, aoid, security );//This could cause memory issues.   
                 tempCoin = new CloudCoin( nn, sn, toStringArray(an), ed, "", "suspect" );//security should be change or keep for pans.
                 //tempCoin.consoleReport();
@@ -610,4 +632,13 @@ public class Bank
         }
         return arr;
     }//end toStringArray
+
+    public String[] concatArrays(String[] a, String[] b) {
+        int aLen = a.length;
+        int bLen = b.length;
+        String[] c= new String[aLen+bLen];
+        System.arraycopy(a, 0, c, 0, aLen);
+        System.arraycopy(b, 0, c, aLen, bLen);
+        return c;
+    }
 }
