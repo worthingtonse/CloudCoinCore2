@@ -22,31 +22,61 @@ import java.io.File;
  */
 public class Bank
 {
+    /**
+     * Number of milliseconds to wait until the RAIDA are ignored. 
+     */
     private final int MAX_RESPONSE_TIME = 10000;//10 seconds - How long the RAIDA will be allowed to all respond
+     /**
+     * location of the "bank" folder.
+     */
     private final String rootFolder;
+    /**
+     * The object that allows communication to the RAIDA
+     */
     public RAIDA raida;
-
-    //public CloudCoin[] bankedCoins;
-    //public CloudCoin[] counterfeitCoins;
+    /**
+     * Used to hold an array of fracked coins while fixing them
+     */
     public CloudCoin[] frackedCoins;
+    /**
+     * Used to hold an array of coins that will be exported
+     */
     public CloudCoin[] exportCoins;
-
-    int totalValueToBank = 0;
-    int totalValueToCounterfeit = 0;
-    int totalValueToFractured = 0;
+/**
+ * Total amount of authentic unfractured coins in the bank file 
+ */
+int totalValueToBank;
+/**
+ * Total amount of counterfeit coins in the bank file 
+ */
+int totalValueToCounterfeit;
+/**
+ * Total amount of fractured coins in the bank file 
+ */
+    int totalValueToFractured;
 
     /**
      * CONSTRUCTOR
+     * @param location of bank file. 
      */
     public Bank(String rootFolder)
     {
         // initialise instance variables
         this.rootFolder = rootFolder;
         raida = new RAIDA( MAX_RESPONSE_TIME );
+        totalValueToBank = 0;
+    totalValueToCounterfeit = 0;
+    totalValueToFractured = 0;
+
     }
 
+   
     /**
-     * METHODS
+     * Method countCoins counts how many coins of a given extension are in a given directory
+     *
+     * @param directoryPath A folder
+     * @param extension A file extension like .bank
+     * @return An array of the differnt denominations of coins. The first index is the total amount of all coins added together. 
      */
     public int[] countCoins( String directoryPath, String extension ){
         int totalCount =  0;
@@ -67,33 +97,37 @@ public class Bank
         return returnCounts;
     }//end count coins
 
+    /**
+     * Method deleteCoin
+     *
+     * @param path The folder that the coin is located in
+     * @return true if the coin is deleted and false if it does not get deleted. 
+     */
     public boolean deleteCoin( String path ){
         boolean deleted = false;
-        //System.out.println("Deleteing Coin: "+path + this.fileName + extension);
-        File f  = new File( path );
+        File f  = new File( path ); //System.out.println("Deleteing Coin: "+path + this.fileName + extension);
         try {
-            deleted = f.delete();
-            if(deleted){
-            }else{
-                // System.out.println("Delete operation is failed.");
+            deleted = f.delete(); if(deleted){ }else{
+               // System.out.println("Delete operation is failed.");
             }//end else
         }catch(Exception e){
-
             e.printStackTrace();
-
         }
         return deleted;
     }//end delete file
 
+    /**
+     * Method detectAuthenticity
+     *
+     * @return The total value put in the bank, the total value that was counterfeited, and total value that was fractured
+     */
     public int[] detectAuthenticity(){
         //LOAD THE .suspect COINS ONE AT A TIME AND TEST THEM
         String[] suspectFileNames  = selectAllFileNamesInBank( "suspect" );
         int totalValueToBank = 0;
         int totalValueToCounterfeit = 0;
         int totalValueToFractured = 0;
-
         int[] results = new int[3];
-
         CloudCoin newCC;
         for(int j = 0; j < suspectFileNames.length; j++){
             try{
@@ -120,6 +154,13 @@ public class Bank
         return results;
     }//end detectAuthenticity
 
+    /**
+     * Method exportAllJson. Exports all files of a certain extension to a JSON file. 
+     *
+     * @param tag A string that can be included in the file name
+     * @param extension The extension that will be given to the exported file. 
+     * @return The return value
+     */
     public boolean exportAllJson( String tag, String extension ){
         boolean jsonExported = true;
         int totalSaved = 0;
@@ -155,6 +196,17 @@ public class Bank
         return jsonExported;
     }//end export
 
+    /**
+     * Method exportJpeg Exports a bunch of JPG images. 
+     *
+     * @param m1 How many jpgs to create of the 1s denomination. 
+     * @param m5 How many jpgs to create of the 5s denomination. 
+     * @param m25 How many jpgs to create of the 25s denomination. 
+     * @param m100 How many jpgs to create of the 100s denomination. 
+     * @param m250 How many jpgs to create of the 250s denomination. 
+     * @param tag A string that will be included in the jpg file name.
+     * @param directory to put the jpeg into. 
+     */
     public void exportJpeg(int m1, int m5, int m25, int m100, int m250, String tag, String directory ){
         boolean jsonExported = true;
         int totalSaved = m1 + ( m5 * 5 ) + ( m25 * 25 ) + (m100 * 100 ) + ( m250  * 250 );//Track the total coins
@@ -212,6 +264,17 @@ public class Bank
         }//for each 1 note  
     }//end export
 
+      /**
+     * Method exportJpeg Exports a JSON file with a .stack exension with a lot of CloudCoins in it. 
+     *
+     * @param m1 How many json to create of the 1s denomination. 
+     * @param m5 How many json to create of the 5s denomination. 
+     * @param m25 How many json to create of the 25s denomination. 
+     * @param m100 How many json to create of the 100s denomination. 
+     * @param m250 How many json to create of the 250s denomination. 
+     * @param tag A string that will be included in the json file name.
+     * @param directory to put the json into. 
+     */
     public boolean exportJson( int m1, int m5, int m25, int m100, int m250, String tag, String directory){
         boolean jsonExported = true;
         int totalSaved = m1 + ( m5 * 5 ) + ( m25 * 25 ) + (m100 * 100 ) + ( m250  * 250 );//Track the total coins
@@ -296,6 +359,12 @@ public class Bank
         return ext;
     }//end getFileExtension
 
+    /**
+     * Method getOneJSON Extracts a single CloudCoin from a JSON file. 
+     *
+     * @param fileName A parameter
+     * @return The JSON of the coin.
+     */
     public String getOneJSON( String fileName){
         try{
             String jsonData = loadFileToString( fileName );
@@ -310,6 +379,12 @@ public class Bank
 
     }//end get one json
 
+    /**
+     * Method ifFileExists Checks to see if a file exists
+     *
+     * @param filePathString A parameter
+     * @return True if the file exists, false if the file does not exist.
+     */
     public boolean ifFileExists( String filePathString ){
         File f = new File(filePathString);
         if(f.exists() && !f.isDirectory()) { 
@@ -318,22 +393,28 @@ public class Bank
         return false;
     }//end if file Exists
 
+    /**
+     * Method importAllInFolder  Takes all CloudCoins in a folder and brings them into the bank file and give them a .suspect extension. 
+     * Must use the importOneFile over and over
+     * @param directory A parameter
+     */
     public void importAllInFolder(String directory){
-        //Get a list of all in the folder except the directory "imported"
-        String[] fileNames = selectFileNamesInFolder(directory);
+        String[] fileNames = selectFileNamesInFolder(directory);//Get a list of all in the folder except the directory "imported"
         for(int i=0; i< fileNames.length; i++){
             System.out.println( fileNames[i]);
         }//end for each file name
-        //Loop through each file. 
-        for(int i=0; i< fileNames.length; i++){
-            //try{
+        for(int i=0; i< fileNames.length; i++){//Loop through each file. 
             importOneFile( directory, fileNames[i] );
-            //   }catch(){}catch(){}//end try catch make coin 
         }//end for each file name
-
-        //If the file is a j
     }//end import
 
+    /**
+     * Method importOneFile. Takes one .stack or .jpg file in a folder and imports it into the bank folder with a .suspect extension. 
+     *
+     * @param directory A parameter
+     * @param loadFileName A parameter
+     * @return The return value
+     */
     public boolean importOneFile(String directory, String loadFileName){
         /*WHAT IS THE FILE'S EXTENSION??*/
         String extension = "";
@@ -344,9 +425,7 @@ public class Bank
         extension = extension.toLowerCase();
         boolean jpg = false;
         if ( extension.equals("jpeg") || extension.equals("jpg")){ jpg =true;   }
-
         /* IF IT IS A JPEG loadJpeg(). OTHERWISE loadIncome()*/
-
         if( jpg ){
             if( ! importJpeg( directory , loadFileName )){ 
                // System.out.println("Failed to load JPEG file");
@@ -358,7 +437,6 @@ public class Bank
                 return false;
             }
         }//end if jpg
-
         //change imported file to have a .imported extention
         renameFileExtension(loadFileName, "suspect" );
         return true;
@@ -399,6 +477,12 @@ public class Bank
         return loadedCoins;
     }//end load coin Array
 
+    /**
+     * Method loadFileToString
+     *
+     * @param jsonfile The path and anme of a file that contains CloudCoins in the form of JSON.
+     * @return The return value
+     */
     public String loadFileToString( String jsonfile) throws FileNotFoundException {
         String jsonData = "";
         BufferedReader br = null;
@@ -508,15 +592,27 @@ public class Bank
         return isSuccessful;
     }//end load income
 
+    /**
+     * Method moveFileToImported Moves a file from one folder to subfolder called "imported"
+     *
+     * @param directory A parameter
+     * @param fileName A parameter
+     * @param newExtension A parameter
+     * @return The return value
+     */
     public boolean moveFileToImported(String directory, String fileName, String newExtension){
         String source = directory + fileName;
         String target = directory +"imported\\"+ fileName;
-
-        System.out.println("source is " + source);
-        System.out.println("target is " + target);
         return new File(source).renameTo(new File(target));
     }
 
+    /**
+     * Method renameFileExtension Changes the file extension of a file. 
+     *
+     * @param source The files name
+     * @param newExtension Teh files new extension
+     * @return true if renamed false if not. 
+     */
     public boolean renameFileExtension(String source, String newExtension){
         String target;
         String currentExtension = getFileExtension(source);
@@ -615,7 +711,7 @@ public class Bank
         return writeGood;
     }//end string to file 
 
-    private int ordinalIndexOf(String str, String substr, int n) {
+    public int ordinalIndexOf(String str, String substr, int n) {
         int pos = str.indexOf(substr);
         while (--n > 0 && pos != -1)
             pos = str.indexOf(substr, pos + 1);
@@ -625,7 +721,6 @@ public class Bank
     public String[] toStringArray(JSONArray array) {
         if(array==null)
             return null;
-
         String[] arr=new String[array.length()];
         for(int i=0; i<arr.length; i++) {
             arr[i]=array.optString(i);
@@ -633,6 +728,13 @@ public class Bank
         return arr;
     }//end toStringArray
 
+    /**
+     * Method concatArrays Takes two arrays and adds them together
+     *
+     * @param a The first array
+     * @param b The second array
+     * @return The arrays together
+     */
     public String[] concatArrays(String[] a, String[] b) {
         int aLen = a.length;
         int bLen = b.length;

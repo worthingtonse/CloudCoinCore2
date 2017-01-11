@@ -4,8 +4,15 @@ import java.nio.file.Files;
 
 public class CommandInterpreter{
     /* Load items for all methods to share*/
+    /**
+     * Keyboard Reader is used to accept user input for the console apps
+     */
     public static KeyboardReader reader = new KeyboardReader();
+    /**
+     * used to manage console apps command availablility
+     */
     public static StateManager stateManager = new StateManager();
+    
     public static Random myRandom = new Random();//This is used for naming new chests
     public static String rootFolder = System.getProperty("user.dir") + File.separator +"bank" + File.separator ;
     public static Bank bank = new Bank(rootFolder);

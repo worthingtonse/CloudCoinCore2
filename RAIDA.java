@@ -21,8 +21,17 @@ import java.time.*;
  */
 public class RAIDA
 {   // instance variables
+    /**
+     * An array of 25 detection agents that make up the RAIDA.
+     */
     public DetectionAgent[] agent;
+    /**
+     * These are threads so that the detection agents can be contacted all at the same time. 
+     */
     private ExecutorService executor;
+     /**
+     * These are threads so that the detection agents can be contacted all at the same time. 
+     */
     private ExecutorService executor3;
 
     /**
@@ -44,7 +53,7 @@ public class RAIDA
     /**
      * Method detectCoin
      *
-     * @param newCoin A parameter
+     * @param newCoin A CloudCoin that will be detected.
      */
     public CloudCoin detectCoin( CloudCoin cc ){
         // Make an array to capture the results of the detection. 
@@ -260,6 +269,16 @@ public class RAIDA
         return brokeCoin;
     }//end fix coin
 
+    /**
+     * Method getTickets
+     *<img src="http://cloudcoin.co/img/fixit.png">
+     * @param triad Three numbers between 0 and 25 that are three trusted servers that will be contacted
+     * @param ans 25 Authenticity Numbers.
+     * @param nn Network Number
+     * @param sn Serial Number
+     * @param denomination The denomination of the CloudCoin 1, 5, 25, 100, 250.
+     * @return The return value is three tickets (hopefully)
+     */
     public String[] getTickets( int[] triad, String[] ans, int nn, int sn, int denomination ){
         String[] returnTickets = new String[3];
         //create a callable for each method
